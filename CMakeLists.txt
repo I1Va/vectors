@@ -3,7 +3,7 @@ project(vectors LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 
-find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Widgets REQUIRED)
 
 
 add_executable(vectors main.cpp src/geometry.cpp src/visual.cpp)
@@ -13,6 +13,7 @@ target_include_directories(vectors
 )
 
 
-set_target_properties(vectors PROPERTIES AUTOMOC ON)
-
-target_link_libraries(vectors PRIVATE Qt6::Widgets)
+set(CMAKE_AUTOMOC ON)
+target_link_libraries(vectors PRIVATE 
+    Qt6::Widgets
+)
