@@ -18,6 +18,8 @@ int main(int argc, char **argv) {
     PlotWidget *big_plot = new PlotWidget(&window, {50, 50}, {550, 550}, {50, 50}, 10);
     PlotWidget *small_plot = new PlotWidget(&window, {600, 400}, {750, 550}, {50, 50}, 10);
 
+    big_plot->DrawVector({50, 50}, {100, 100}, 0.1, 30);
+
     //  small_plot->DrawVector({0, 0}, {100, 100});
 
     window.show();                

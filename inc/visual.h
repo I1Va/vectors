@@ -1,6 +1,9 @@
 #ifndef VISUAL_H
 #define VISUAL_H
 
+#include <QVector>
+#include <QMutex>
+
 
 class PixelPoint {
     public:
@@ -15,13 +18,11 @@ class PixelPoint {
 
 class PlotWidget : public QWidget {
 public:
-        explicit PlotWidget(QWidget *parent, PixelPoint LeftCorner, PixelPoint RightCorner, PixelPoint CordCenter, int CordScale);
-        void DrawVector(QPainter *painter, PixelPoint VecStart, PixelPoint VecEnd, double ArrowScale, double ArrowAngle); 
-    
-    
+    explicit PlotWidget(QWidget *parent, PixelPoint LeftCorner, PixelPoint RightCorner, PixelPoint CordCenter, int CordScale);
+    void DrawVector(PixelPoint VecStart, PixelPoint VecEnd, double ArrowScale, double ArrowAngle); 
+
 protected:
     void paintEvent(QPaintEvent *event) override;
-
 
 private:
     void MakeAxes(QPainter *painter);
@@ -33,6 +34,19 @@ private:
     PixelPoint CanvasRightCorner = {0, 0};
     int CanvasWidth = 0;
     int CanvasHeight = 0;
+
+    enum ShapeType { 
+        Line, 
+        Dot
+    };
+
+    struct Shape {
+        enum ShapeType Type;
+        QLine Line;
+    };
+
+    QVector<Shape> Shapes;
+    QMutex Mutex;
 
 };
 

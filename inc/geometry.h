@@ -3,10 +3,11 @@
 
 
 #include <math.h>
+#include <iostream>
+
 
 class Vec2;
 class VectorArrow;
-
 
 
 class Vec2 {
@@ -19,8 +20,10 @@ class Vec2 {
 
         Vec2 operator*(const double scalar);
         Vec2 operator+(const Vec2 other);
-
+        std::ostream& operator<<(std::ostream &stream);
         Vec2 Rotate(double Angle);
+
+        double Len();
 };
 
 class VectorArrow {
@@ -45,4 +48,4 @@ const double DEFAULT_ARROW_SCALE = 0.2;
 const double DEFAULT_ARROW_ANGLE = M_PI / 6;
 
 
-#endif // GEOMETRY_H
+#endif // GEOMETRY_Hroustruop c++ second edition

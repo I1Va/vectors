@@ -36,20 +36,17 @@ PlotWidget::PlotWidget(QWidget *parent,
     setStyleSheet("background-color: white;");
 }   
 
-void PlotWidget::DrawVector(QPainter *painter, PixelPoint VecStart, PixelPoint VecEnd, double ArrowScale=DEFAULT_ARROW_SCALE, double ArrowAngle=DEFAULT_ARROW_ANGLE) {
-    assert(painter);
-
-    QPen pen(Qt::black);    
-    painter->setPen(pen);
-    pen.setWidth(2);
-
-
+void PlotWidget::DrawVector(PixelPoint VecStart, PixelPoint VecEnd, double ArrowScale=DEFAULT_ARROW_SCALE, double ArrowAngle=DEFAULT_ARROW_ANGLE) {
     Vec2 Vector(VecStart.x, VecStart.y, VecEnd.x, VecEnd.y);
     VectorArrow Arrow(Vector, ArrowScale, ArrowAngle);
 
-    painter->drawLine(Vector.x1, Vector.y1, Vector.x2, Vector.y2);
-    painter->drawLine(Arrow.LeftPart.x1, Arrow.LeftPart.y1, Arrow.LeftPart.x2, Arrow.LeftPart.y2);
-    painter->drawLine(Arrow.RightPart.x1, Arrow.RightPart.y1, Arrow.RightPart.x2, Arrow.RightPart.y2);
+    QMutexLocker lk(&Mutex);
+
+    Shapes.append({ShapeType::Line, QLine(Vector.x1, Vector.y1, Vector.x2, Vector.y2)});
+    Shapes.append({ShapeType::Line, QLine(Arrow.LeftPart.x1, Arrow.LeftPart.y1, Arrow.LeftPart.x2, Arrow.LeftPart.y2)});
+    Shapes.append({ShapeType::Line, QLine(Arrow.RightPart.x1, Arrow.RightPart.y1, Arrow.RightPart.x2, Arrow.RightPart.y2)});
+
+    update();
 }
 
 void PlotWidget::MakeAxes(QPainter *painter) {
@@ -61,6 +58,7 @@ void PlotWidget::MakeAxes(QPainter *painter) {
     pen.setWidth(2);
     painter->drawLine(0, CordCenter.y, CanvasWidth, CordCenter.y);
     painter->drawLine(CordCenter.x, 0, CordCenter.x, CanvasHeight);
+
 
     pen.setWidth(1);
     
@@ -86,4 +84,26 @@ void PlotWidget::paintEvent(QPaintEvent *event) {
     QPainter painter(this);
 
     MakeAxes(&painter);
+
+    Mutex.lock();
+    auto TempShapes = Shapes;
+    Mutex.unlock();
+
+    for (const Shape &CurShape : TempShapes) {
+        
+        painter.save();
+
+        QPen pen(Qt::black);
+        pen.setWidth(2);    
+        painter.setPen(pen);
+        // painter.setBrush(s.color);
+
+        switch (CurShape.Type) { 
+            case ShapeType::Line:
+                printf("Line %d %d %d %d\n", CurShape.Line.x1(), CurShape.Line.y1(), CurShape.Line.x2(), CurShape.Line.y2()); 
+                painter.drawLine(CurShape.Line); break;
+        }
+
+        painter.restore();
+    }
 }
