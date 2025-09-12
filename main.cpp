@@ -9,7 +9,7 @@ const static int WINDOW_HEIGHT = 600;
 
 const static float AXIS_TRIANGLE_BASE_DELTA = 4;
 const static float AXIS_TRIANGLE_HEIGHT_DELTA = 7;
-const static float AXIS_MARK_DELTA = 1;
+const static float AXIS_MARK_DELTA = 2;
 
 
 class geom_vector2 {
@@ -25,6 +25,13 @@ public:
         y += other.y;
         return *this;
     }
+     geom_vector2 operator*=(const float scalar) { 
+        len2 = NAN; 
+        x *= scalar;
+        y *= scalar;
+        return *this;
+    }
+
     geom_vector2 operator-=(const geom_vector2 &other) { 
         len2 = NAN; 
         x -= other.x;
@@ -56,14 +63,14 @@ class coordinate_system {
     geom_vector2 frame_left;
     geom_vector2 frame_right;
 
-    geom_vector2 center;
+    geom_vector2 axes_center;
     
     int scale;
 
     int width;
     int height;
 
-    std::vector<coordinate_system *> children;
+    std::vector<coordinate_system*> children;
 
 private:
     void draw_axis_mark_line(
@@ -140,8 +147,6 @@ private:
     }
 
     void draw_axes(sf::RenderWindow &window) {
-        geom_vector2 axes_center(frame_left + center);
-
         geom_vector2 y_axis_start(axes_center.get_x(), frame_right.get_y());
         geom_vector2 y_axis_end(axes_center.get_x(), frame_left.get_y());
         geom_vector2 x_axis_start(frame_left.get_x(), axes_center.get_y());
@@ -162,22 +167,36 @@ private:
         draw_axis_marks(window, axes_center, x_axis_start, x_axis_end - geom_vector2(AXIS_MARK_DELTA, 0), 
                                              y_axis_start, y_axis_end + geom_vector2(0, AXIS_MARK_DELTA));
     }
+
+    bool is_inside(const geom_vector2 &plot_dot) {
+        if (plot_dot.get_x() > frame_right.get_x() ||
+            plot_dot.get_x() < frame_left.get_x())
+            return false;
+        
+
+        if (plot_dot.get_y() > frame_right.get_y() ||
+            plot_dot.get_y() < frame_left.get_y())
+            return false;
+
+        return true; 
+    }
+
 public:
     coordinate_system
     (
         const geom_vector2 &frame_left,
         const geom_vector2 &frame_right,
-        const geom_vector2 &center,
+        const geom_vector2 &axes_center,
         const int scale
     ): 
         frame_left(frame_left),
         frame_right(frame_right),
-        center(center),
+        axes_center(axes_center),
         scale(scale) 
     {   
         width = frame_right.get_x() - frame_left.get_x();
         height = frame_right.get_y() - frame_left.get_y();
-        this->center += frame_left;          
+        this->axes_center += frame_left;          
     }
 
     void draw_plot(sf::RenderWindow &window) {
@@ -195,7 +214,10 @@ public:
 
         // window.draw(line.data(), line.size(), sf::PrimitiveType::Lines);
     }
-
+    
+    void link_child(coordinate_system *clone) {
+        children.push_back(clone);
+    }
                       
 
     void draw_line() {
@@ -205,11 +227,44 @@ public:
         // children draw
     }
 
-    void draw_dot() {
-        // аналогично
+   
+    void draw_func(sf::RenderWindow& window, float (*func)(float), bool pass_action=true){
+        assert(func);
+    
+        if (pass_action) {
+            for (coordinate_system *cs : children) {
+                cs->draw_func(window, func, false);
+            }
+        }
+        
+        for (int x = 0; x < width; x++){
+            float geom_x = (frame_left.get_x() + x - axes_center.get_x()) / scale;
+            float geom_y = func(geom_x);
+
+            geom_vector2 geom_dot(geom_x, geom_y);
+
+            draw_dot(window, geom_dot);
+        }
     }
 
+    void draw_dot(sf::RenderWindow &window, geom_vector2 dot, bool pass_action=true) { // check dot outbounding 
+        sf::VertexArray dot_shape(sf::PrimitiveType::Points, 1);
+        dot_shape[0].color = sf::Color::Black;
 
+        if (pass_action) {
+            for (coordinate_system *cs : children) {
+                cs->draw_dot(window, dot, false);
+            }
+        }
+        
+        dot *= scale;
+        dot += axes_center;
+
+        if (!is_inside(dot)) return;
+
+        dot_shape[0].position = {dot.get_x(), dot.get_y()};
+        window.draw(dot_shape);
+    }
 };
 
 
@@ -217,14 +272,24 @@ public:
 
 
 
+float sin_func(float x) {
+    return std::sin(x);
+}
 
 int main(int argc, char **argv) {
     sf::RenderWindow window(sf::VideoMode({WINDOW_WIDTH, WINDOW_HEIGHT}), "Plots");
-    coordinate_system cordsys_big({100.0, 100.0}, {400.0, 400.0}, {20.0, 20.0}, 5);
+    coordinate_system cordsys_big({100.0, 100.0}, {400.0, 400.0}, {70.0, 70.0}, 20);
+    coordinate_system cordsys_small({450.0, 100.0}, {600.0, 250.0}, {30.0, 30.0}, 5);
+
+    cordsys_big.link_child(&cordsys_small);
 
     // PlotWidget *big_plot = new PlotWidget(&window, {50, 50}, {550, 550}, {50, 50}, 10);
     // PlotWidget *small_plot = new PlotWidget(&window, {600, 400}, {750, 550}, {50, 50}, 10);
 
+
+    // window.clear(sf::Color::White);
+
+    
 
     while (window.isOpen()){
         while (const std::optional event = window.pollEvent()){
@@ -234,25 +299,19 @@ int main(int argc, char **argv) {
         }
 
         window.clear(sf::Color::Black);
-        // window.clear(sf::Color::White);
-
         cordsys_big.draw_plot(window);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        cordsys_small.draw_plot(window);
 
         
+
+        cordsys_big.draw_func(window, &sin_func);
+
+        
+        // cordsys_big.draw_dot(window, {10, 0});
+
+        // draw_sin_func(window, cordsys_big);
+
+
         // plot1.drawPlot(window);
         // plot2.drawPlot(window);
 
@@ -268,3 +327,5 @@ int main(int argc, char **argv) {
         window.display();
     }
 }
+
+
