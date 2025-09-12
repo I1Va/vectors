@@ -220,13 +220,7 @@ public:
     }
                       
 
-    void draw_line() {
-        // cords transfrom
-        
-        // cs draw
-        // children draw
-    }
-
+   
    
     void draw_func(sf::RenderWindow& window, float (*func)(float), bool pass_action=true){
         assert(func);
@@ -247,7 +241,13 @@ public:
         }
     }
 
-    void draw_dot(sf::RenderWindow &window, geom_vector2 dot, bool pass_action=true) { // check dot outbounding 
+    geom_vector2 convert_to_pixel_cord(geom_vector2 dot) {
+        dot *= scale;
+        dot += axes_center;
+        return dot;
+    }
+
+    void draw_dot(sf::RenderWindow &window, geom_vector2 dot, bool pass_action=true) {
         sf::VertexArray dot_shape(sf::PrimitiveType::Points, 1);
         dot_shape[0].color = sf::Color::Black;
 
@@ -257,14 +257,59 @@ public:
             }
         }
         
-        dot *= scale;
-        dot += axes_center;
+        dot = convert_to_pixel_cord(dot);
 
         if (!is_inside(dot)) return;
 
         dot_shape[0].position = {dot.get_x(), dot.get_y()};
         window.draw(dot_shape);
     }
+
+    void draw_line(
+        sf::RenderWindow &window, 
+        geom_vector2 line_start, 
+        geom_vector2 line_end,        
+        bool pass_action=true
+    ) { 
+
+        if (pass_action) {
+            for (coordinate_system *cs : children) {
+                cs->draw_vector(window, line_start, line_end, false);
+            }
+        }
+
+        sf::VertexArray line_shape(sf::PrimitiveType::Lines, 2);
+        line_start = convert_to_pixel_cord(line_start);
+        line_end = convert_to_pixel_cord(line_end);
+
+        line_shape[0].position = {line_start.get_x(), line_start.get_y()};
+        line_shape[0].color = sf::Color::Black;
+
+        line_shape[1].position = {line_end.get_x(), line_end.get_y()};
+        line_shape[1].color = sf::Color::Black;
+
+        window.draw(line_shape);  
+    }
+
+
+    void draw_vector(
+        sf::RenderWindow &window, 
+        geom_vector2 vector_start, 
+        geom_vector2 vector_end,        
+        bool pass_action=true
+    ) { 
+        sf::VertexArray dot_shape(sf::PrimitiveType::Points, 1);
+        dot_shape[0].color = sf::Color::Black;
+
+        if (pass_action) {
+            for (coordinate_system *cs : children) {
+                cs->draw_vector(window, vector_start, vector_end, false);
+            }
+        }
+        
+        draw_line(window, vector_start, vector_end);
+    }
+
 };
 
 
@@ -305,6 +350,7 @@ int main(int argc, char **argv) {
         
 
         cordsys_big.draw_func(window, &sin_func);
+        cordsys_big.draw_line(window, {0, 0}, {10, 10});
 
         
         // cordsys_big.draw_dot(window, {10, 0});
