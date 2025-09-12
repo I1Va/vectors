@@ -11,6 +11,8 @@ const static float AXIS_TRIANGLE_BASE_DELTA = 4;
 const static float AXIS_TRIANGLE_HEIGHT_DELTA = 7;
 const static float AXIS_MARK_DELTA = 2;
 
+const static float ARROW_BASE_SCALE = 0.3;
+const static float ARROW_PERP_SCALE = 0.05;
 
 class geom_vector2 {
     float x, y;
@@ -18,6 +20,7 @@ class geom_vector2 {
 public:
     geom_vector2(const float x, const float y): x(x), y(y) { len2 = NAN; }
     geom_vector2 operator+(const geom_vector2 &other) const { return geom_vector2(x + other.x, y + other.y); }
+    geom_vector2 operator*(const float scalar) const { return geom_vector2(x * scalar, y * scalar); }
     geom_vector2 operator-(const geom_vector2 &other) const { return geom_vector2(x - other.x, y - other.y); }
     geom_vector2 operator+=(const geom_vector2 &other) { 
         len2 = NAN; 
@@ -39,6 +42,10 @@ public:
         return *this;
     }
 
+    geom_vector2 rotate90() const {
+        return geom_vector2(-y, x);
+    }
+    
     bool operator<(const geom_vector2 &other) const { return x < other.x && y < other.y; }
     bool operator<=(const geom_vector2 &other) const { return x <= other.x && y <= other.y; }
     bool operator>(const geom_vector2 &other) const { return x > other.x && y > other.y; }
@@ -274,7 +281,7 @@ public:
 
         if (pass_action) {
             for (coordinate_system *cs : children) {
-                cs->draw_vector(window, line_start, line_end, false);
+                cs->draw_line(window, line_start, line_end, false);
             }
         }
 
@@ -308,6 +315,22 @@ public:
         }
         
         draw_line(window, vector_start, vector_end);
+
+
+        geom_vector2 cur_vec = vector_start - vector_end;
+
+        
+        geom_vector2 arrow_base = cur_vec * ARROW_BASE_SCALE;
+        geom_vector2 arrow_perp = (cur_vec * ARROW_PERP_SCALE).rotate90();
+
+       
+
+        geom_vector2 arrow_left_part = arrow_base + arrow_perp;
+        geom_vector2 arrow_right_part = arrow_base + arrow_perp * (-1);
+
+        draw_line(window, vector_end, vector_end + arrow_left_part);
+        draw_line(window, vector_end, vector_end + arrow_right_part);
+    
     }
 
 };
@@ -344,13 +367,15 @@ int main(int argc, char **argv) {
         }
 
         window.clear(sf::Color::Black);
+        window.clear(sf::Color::White);
+
         cordsys_big.draw_plot(window);
         cordsys_small.draw_plot(window);
 
         
 
-        cordsys_big.draw_func(window, &sin_func);
-        cordsys_big.draw_line(window, {0, 0}, {10, 10});
+        // cordsys_big.draw_func(window, &sin_func);
+        cordsys_big.draw_vector(window, {5, 5}, {8, 10});
 
         
         // cordsys_big.draw_dot(window, {10, 0});
