@@ -1,19 +1,14 @@
-cmake_minimum_required(VERSION 4.1.1)
-project(vectors LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.16)
 
-set(CMAKE_CXX_STANDARD 17)
+project(Vectors LANGUAGES CXX)
 
-find_package(Qt6 REQUIRED COMPONENTS Widgets REQUIRED)
+find_package(SFML 3 REQUIRED COMPONENTS Graphics Audio Network)
 
+add_executable(Vectors main.cpp src/geometry.cpp src/visual.cpp)
 
-add_executable(vectors main.cpp src/geometry.cpp src/visual.cpp)
-
-target_include_directories(vectors
+target_include_directories(Vectors
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/inc
 )
 
+target_link_libraries(Vectors PRIVATE SFML::Graphics SFML::Audio SFML::Network)
 
-set(CMAKE_AUTOMOC ON)
-target_link_libraries(vectors PRIVATE 
-    Qt6::Widgets
-)

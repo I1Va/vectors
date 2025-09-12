@@ -1,109 +1,168 @@
-#include <QApplication>
-#include <QWidget>
-#include <QPainter>
-#include <QMutex>
-
-#include <iostream>
-#include "geometry.h"
-#include "visual.h"
-
-PixelPoint::PixelPoint(int x, int y) {
-    this->x = x;
-    this->y = y;
-} 
-
-bool PixelPoint::operator<(const PixelPoint other) { return x < other.x && y < other.y; }
-PixelPoint PixelPoint::operator+(const PixelPoint other) { return PixelPoint(x + other.x, y + other.y); } 
+// #include <visual.hpp>
+// #include <stdint.h>
+// #include <stdio.h>
+// #include <SFML/Graphics.hpp>
 
 
+// class CoordinateSystem{
+// public:
+//     sf::Vector2f size;
+//     sf::Vector2f position;
+
+//     float pixels_per_unit;
+//     sf::Vector2f center;
+
+//     CoordinateSystem(sf::Vector2f size,
+//                      sf::Vector2f position = sf::Vector2f{0.f, 0.f},
+//                      sf::Vector2f center = sf::Vector2f{0.f, 0.f},
+//                      float pixels_per_unit = 50.f);
+
+//     void drawPlot(sf::RenderWindow& window);
+
+//     void drawFunc(sf::RenderWindow& window, float (*func)(float));
+
+//     void drawVec(sf::RenderWindow& window, Vector dot, Vector vec);
+
+// private:
+//     sf::RectangleShape canvas;
+//     sf::VertexArray y_axis;
+//     sf::VertexArray x_axis;
+
+//     float marks_eps;
+//     int marks_amount;
+
+//     void getAxes();
+//     void setMarks(sf::RenderWindow& window);
+//     bool isInside(sf::Vector2f dot);
+
+//     void drawVecPrivate(sf::RenderWindow& window, Vector dot, Vector vec);
+// };
 
 
-PlotWidget::PlotWidget(QWidget *parent, 
-                       const PixelPoint LeftCorner, 
-                       const PixelPoint RightCorner, 
-                       const PixelPoint CordCenter, 
-                       const int CordScale)
-    : QWidget(parent) 
-    , CanvasLeftCorner(LeftCorner)
-    , CanvasRightCorner(RightCorner)
-    , CordCenter(CordCenter)
-    , CordScale(CordScale)
-{
-    CanvasWidth = CanvasRightCorner.x - CanvasLeftCorner.x;
-    CanvasHeight = CanvasRightCorner.y - CanvasLeftCorner.y;
+// coordinate_system::coordinate_system(sf::Vector2f size,
+//                                      sf::Vector2f position,
+//                                      sf::Vector2f center,
+//                                      float pixels_per_unit){
+//     this->size = size;
+//     this->position = position;
+//     this->center = center;
+//     this->pixels_per_unit = pixels_per_unit;
 
-    setGeometry(CanvasLeftCorner.x, CanvasLeftCorner.y, CanvasWidth, CanvasHeight);
-    setStyleSheet("background-color: white;");
-}   
+//     canvas = sf::RectangleShape(size);
 
-void PlotWidget::DrawVector(PixelPoint VecStart, PixelPoint VecEnd, double ArrowScale=DEFAULT_ARROW_SCALE, double ArrowAngle=DEFAULT_ARROW_ANGLE) {
-    Vec2 Vector(VecStart.x, VecStart.y, VecEnd.x, VecEnd.y);
-    VectorArrow Arrow(Vector, ArrowScale, ArrowAngle);
+//     canvas.setPosition(position);
+//     canvas.setFillColor(sf::Color::White);
 
-    QMutexLocker lk(&Mutex);
+//     getAxes();
 
-    Shapes.append({ShapeType::Line, QLine(Vector.x1, Vector.y1, Vector.x2, Vector.y2)});
-    Shapes.append({ShapeType::Line, QLine(Arrow.LeftPart.x1, Arrow.LeftPart.y1, Arrow.LeftPart.x2, Arrow.LeftPart.y2)});
-    Shapes.append({ShapeType::Line, QLine(Arrow.RightPart.x1, Arrow.RightPart.y1, Arrow.RightPart.x2, Arrow.RightPart.y2)});
+//     marks_eps = 10;
+//     marks_amount = int(size.x) / int(pixels_per_unit);
+// }
 
-    update();
-}
+// void coordinate_system::drawPlot(sf::RenderWindow& window){
+//     window.draw(canvas);
 
-void PlotWidget::MakeAxes(QPainter *painter) {
-    assert(painter);
+//     window.draw(x_axis);
+//     window.draw(y_axis);
 
-    QPen pen(Qt::black);    
-    painter->setPen(pen);
+//     setMarks(window);
+// }
 
-    pen.setWidth(2);
-    painter->drawLine(0, CordCenter.y, CanvasWidth, CordCenter.y);
-    painter->drawLine(CordCenter.x, 0, CordCenter.x, CanvasHeight);
+// void coordinate_system::getAxes(){
+//     y_axis = sf::VertexArray(sf::PrimitiveType::Lines, 2);
+//     x_axis = sf::VertexArray(sf::PrimitiveType::Lines, 2);
 
+//     sf::Vector2f plot_window_center = {position.x + size.x / 2, position.y + size.y / 2};
 
-    pen.setWidth(1);
-    
-    // Horizontal axe
-    for (int hor_tick_x = CordCenter.x; hor_tick_x < CanvasWidth; hor_tick_x += CordScale) {
-        painter->drawLine(hor_tick_x, CordCenter.y - 1, hor_tick_x, CordCenter.y + 1);
-    }
-    for (int hor_tick_x = CordCenter.x; hor_tick_x >= 0; hor_tick_x -= CordScale) {
-        painter->drawLine(hor_tick_x, CordCenter.y - 1, hor_tick_x, CordCenter.y + 1);
-    }
+//     y_axis[0].position = sf::Vector2f({plot_window_center.x - int(center.x * pixels_per_unit), position.y});
+//     y_axis[0].color = sf::Color::Black;
+//     y_axis[1].position = sf::Vector2f({plot_window_center.x - int(center.x * pixels_per_unit), position.y + size.y});
+//     y_axis[1].color = sf::Color::Black;
 
-    // Vertical Axe
-    for (int ver_tick_y = CordCenter.y; ver_tick_y < CanvasHeight; ver_tick_y += CordScale) {
-        painter->drawLine(CordCenter.x - 1, ver_tick_y, CordCenter.x + 1, ver_tick_y);
-    }
-    for (int ver_tick_y = CordCenter.y; ver_tick_y >= 0; ver_tick_y -= CordScale) {
-        painter->drawLine(CordCenter.x - 1, ver_tick_y, CordCenter.x + 1, ver_tick_y);
-    }
+//     x_axis[0].position = sf::Vector2f({position.x, plot_window_center.y + int(center.y * pixels_per_unit)});
+//     x_axis[0].color = sf::Color::Black;
+//     x_axis[1].position = sf::Vector2f({position.x + size.x, plot_window_center.y + int(center.y * pixels_per_unit)});
+//     x_axis[1].color = sf::Color::Black;
+// }
 
-}
+// void coordinate_system::setMarks(sf::RenderWindow& window){
+//     sf::VertexArray mark(sf::PrimitiveType::Lines, 2);
 
-void PlotWidget::paintEvent(QPaintEvent *event) {
-    QPainter painter(this);
+//     sf::Vector2f plot_window_center = {position.x + size.x / 2, position.y + size.y / 2};
 
-    MakeAxes(&painter);
+//     for (int i = 0; i <= marks_amount; i++){
+//         mark[0].position = sf::Vector2f({plot_window_center.x - marks_eps / 2 - int(center.x * pixels_per_unit), position.y + i * pixels_per_unit});
+//         mark[0].color = sf::Color::Black;
 
-    Mutex.lock();
-    auto TempShapes = Shapes;
-    Mutex.unlock();
+//         mark[1].position = sf::Vector2f({plot_window_center.x + marks_eps / 2 - int(center.x * pixels_per_unit), position.y + i * pixels_per_unit});
+//         mark[1].color = sf::Color::Black;
 
-    for (const Shape &CurShape : TempShapes) {
-        
-        painter.save();
+//         window.draw(mark);
+//     }
 
-        QPen pen(Qt::black);
-        pen.setWidth(2);    
-        painter.setPen(pen);
-        // painter.setBrush(s.color);
+//     for (int i = 0; i <= marks_amount; i++){
+//         mark[0].position = sf::Vector2f({position.x + i * pixels_per_unit, plot_window_center.y + marks_eps / 2 + int(center.y * pixels_per_unit)});
+//         mark[0].color = sf::Color::Black;
 
-        switch (CurShape.Type) { 
-            case ShapeType::Line:
-                printf("Line %d %d %d %d\n", CurShape.Line.x1(), CurShape.Line.y1(), CurShape.Line.x2(), CurShape.Line.y2()); 
-                painter.drawLine(CurShape.Line); break;
-        }
+//         mark[1].position = sf::Vector2f({position.x + i * pixels_per_unit, plot_window_center.y - marks_eps / 2 + int(center.y * pixels_per_unit)});
+//         mark[1].color = sf::Color::Black;
 
-        painter.restore();
-    }
-}
+//         window.draw(mark);
+//     }
+// }
+
+// bool coordinate_system::isInside(sf::Vector2f dot){
+//     if (dot.y > center.y + size.y / pixels_per_unit / 2 ||
+//         dot.y < center.y - size.y / pixels_per_unit / 2)
+//         return false;
+
+//     if (dot.x > center.x + size.x / pixels_per_unit / 2 ||
+//         dot.x < center.x - size.x / pixels_per_unit / 2)
+//         return false;
+
+//     return true;
+// }
+
+// void coordinate_system::drawFunc(sf::RenderWindow& window, float (*func)(float)){
+//     sf::VertexArray dot(sf::PrimitiveType::Points, 1);
+//     dot[0].color = sf::Color::Black;
+
+//     for (int x = 0; x < size.x; x++){
+//         float x_plot = (x - size.x / 2) / pixels_per_unit + center.x;
+//         float y_plot = func(x_plot);
+
+//         if (!isInside({x_plot, y_plot})) continue;
+
+//         float x_window = (x_plot - center.x) * pixels_per_unit + position.x + size.x / 2;
+//         float y_window = 2 * position.y + size.y - ((y_plot - center.y) * pixels_per_unit + position.y + size.y / 2);
+
+//         dot[0].position = {x_window, y_window};
+
+//         window.draw(dot);
+//     }
+// }
+
+// void coordinate_system::drawVecPrivate(sf::RenderWindow& window, Vector dot, Vector vec){
+//     sf::VertexArray vector(sf::PrimitiveType::Lines, 2);
+//     vector[0].color = sf::Color::Black;
+//     vector[1].color = sf::Color::Black;
+
+//     Vector begin_plot = {dot.x, dot.y};
+//     Vector end_plot = {dot.x + vec.x, dot.y + vec.y};
+
+//     Vector begin_window = {((begin_plot.x - center.x) * pixels_per_unit + position.x + size.x / 2),
+//                            2 * position.y + size.y - ((begin_plot.y - center.y) * pixels_per_unit + position.y + size.y / 2)};
+//     Vector end_window = {((end_plot.x - center.x) * pixels_per_unit + position.x + size.x / 2),
+//                            2 * position.y + size.y - ((end_plot.y - center.y) * pixels_per_unit + position.y + size.y / 2)};
+
+//     vector[0].position = {begin_window.x, begin_window.y};
+//     vector[1].position = {end_window.x, end_window.y};
+
+//     window.draw(vector);
+// }
+
+// void coordinate_system::drawVec(sf::RenderWindow& window, Vector dot, Vector vec){
+//     drawVecPrivate(window, dot, vec);
+//     drawVecPrivate(window, dot + vec, vec.normal().rotate(M_PI / 4) / 4);
+//     drawVecPrivate(window, dot + vec, vec.normal().rotate(M_PI / 4).reflect(vec) / 4);
+// }
