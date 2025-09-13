@@ -1,168 +1,251 @@
-// #include <visual.hpp>
-// #include <stdint.h>
-// #include <stdio.h>
-// #include <SFML/Graphics.hpp>
+#include <SFML/Graphics.hpp>
+#include <SFML/System.hpp>
+#include "geometry.hpp"
+#include "visual.hpp"
+
+coordinate_system::coordinate_system
+    (
+        const geom_vector2 &frame_left,
+        const geom_vector2 &frame_right,
+        const geom_vector2 &axes_center,
+        const int scale
+    ):  frame_left(frame_left), 
+        frame_right(frame_right), 
+        axes_center(frame_left + axes_center), 
+        scale(scale) 
+    {
+        width = frame_right.get_x() - frame_left.get_x();
+        height = frame_right.get_y() - frame_left.get_y();
+    };
+
+void coordinate_system::draw_axis_mark_line(
+        sf::RenderWindow &window, 
+        const geom_vector2 &start, 
+        const geom_vector2 &end)
+{
+    sf::VertexArray mark(sf::PrimitiveType::Lines, 2);
+
+    mark[0].position = {start.get_x(), start.get_y()};
+    mark[0].color = sf::Color::Black;
+
+    mark[1].position = {end.get_x(), end.get_y()};
+    mark[1].color = sf::Color::Black;
+
+    window.draw(mark);  
+}
+
+void coordinate_system::draw_axis_marks(
+        sf::RenderWindow &window, 
+        const geom_vector2 center,
+        const geom_vector2 x_start,
+        const geom_vector2 x_end,
+        const geom_vector2 y_start,
+        const geom_vector2 y_end) {
+
+    geom_vector2 x_axis_mark_delta(0, AXIS_MARK_DELTA);
+    geom_vector2 y_axis_mark_delta(AXIS_MARK_DELTA, 0);
+    
+    for (geom_vector2 x = center; x >= x_start; x -= geom_vector2(scale, 0)) {
+        draw_axis_mark_line(window, x + x_axis_mark_delta, x - x_axis_mark_delta);
+    }
+    for (geom_vector2 x = center; x <= x_end; x += geom_vector2(scale, 0)) {
+        draw_axis_mark_line(window, x + x_axis_mark_delta, x - x_axis_mark_delta);
+    }
+
+    for (geom_vector2 y = center; y >= y_end; y -= geom_vector2(0, scale)) {
+        
+        draw_axis_mark_line(window, y + y_axis_mark_delta, y - y_axis_mark_delta);
+    }
+    for (geom_vector2 y = center; y <= y_start; y += geom_vector2(0, scale)) {
+        draw_axis_mark_line(window, y + y_axis_mark_delta, y - y_axis_mark_delta);
+    }
+}
+
+void coordinate_system::draw_axis(sf::RenderWindow &window, 
+                const geom_vector2 &start,
+                const geom_vector2 &end) {
+    sf::VertexArray axis(sf::PrimitiveType::Lines, 2);
+
+    axis[0].position = sf::Vector2f({start.get_x(), start.get_y()});
+    axis[0].color = sf::Color::Black;
+    axis[1].position = sf::Vector2f({end.get_x(), end.get_y()});
+    axis[1].color = sf::Color::Black;
+
+    window.draw(axis);
+}
+
+void coordinate_system::draw_triangle(
+    sf::RenderWindow &window,
+    const geom_vector2 &dot1,
+    const geom_vector2 &dot2,
+    const geom_vector2 &dot3) {
+    sf::ConvexShape triangle;
+
+    triangle.setPointCount(3);
+
+    triangle.setPoint(0, {dot1.get_x(), dot1.get_y()}); 
+    triangle.setPoint(1, {dot2.get_x(), dot2.get_y()}); 
+    triangle.setPoint(2, {dot3.get_x(), dot3.get_y()});
+
+    triangle.setFillColor(sf::Color::Black);
+
+    window.draw(triangle);
+}
+
+void coordinate_system::draw_axes(sf::RenderWindow &window) {
+    geom_vector2 y_axis_start(axes_center.get_x(), frame_right.get_y());
+    geom_vector2 y_axis_end(axes_center.get_x(), frame_left.get_y());
+    geom_vector2 x_axis_start(frame_left.get_x(), axes_center.get_y());
+    geom_vector2 x_axis_end(frame_right.get_x(), axes_center.get_y());
+
+    draw_axis(window, y_axis_start, y_axis_end); 
+    draw_axis(window, x_axis_start, x_axis_end); 
 
 
-// class CoordinateSystem{
-// public:
-//     sf::Vector2f size;
-//     sf::Vector2f position;
+    geom_vector2 x_axis_tr_dot1 = x_axis_end + geom_vector2(-AXIS_TRIANGLE_HEIGHT_DELTA, AXIS_TRIANGLE_BASE_DELTA);
+    geom_vector2 x_axis_tr_dot2 = x_axis_end + geom_vector2(-AXIS_TRIANGLE_HEIGHT_DELTA, -AXIS_TRIANGLE_BASE_DELTA);
+    geom_vector2 y_axis_tr_dot1 = y_axis_end + geom_vector2(AXIS_TRIANGLE_BASE_DELTA, AXIS_TRIANGLE_HEIGHT_DELTA);
+    geom_vector2 y_axis_tr_dot2 = y_axis_end + geom_vector2(-AXIS_TRIANGLE_BASE_DELTA, AXIS_TRIANGLE_HEIGHT_DELTA);
 
-//     float pixels_per_unit;
-//     sf::Vector2f center;
+    draw_triangle(window, x_axis_tr_dot1, x_axis_tr_dot2, x_axis_end);
+    draw_triangle(window, y_axis_tr_dot1, y_axis_tr_dot2, y_axis_end);
 
-//     CoordinateSystem(sf::Vector2f size,
-//                      sf::Vector2f position = sf::Vector2f{0.f, 0.f},
-//                      sf::Vector2f center = sf::Vector2f{0.f, 0.f},
-//                      float pixels_per_unit = 50.f);
+    draw_axis_marks(window, axes_center, x_axis_start, x_axis_end - geom_vector2(AXIS_MARK_DELTA, 0), 
+                                             y_axis_start, y_axis_end + geom_vector2(0, AXIS_MARK_DELTA));
+}
 
-//     void drawPlot(sf::RenderWindow& window);
+bool coordinate_system::is_inside(const geom_vector2 &plot_dot) {
+    if (plot_dot.get_x() > frame_right.get_x() ||
+        plot_dot.get_x() < frame_left.get_x())
+        return false;
+    
 
-//     void drawFunc(sf::RenderWindow& window, float (*func)(float));
+    if (plot_dot.get_y() > frame_right.get_y() ||
+        plot_dot.get_y() < frame_left.get_y())
+        return false;
 
-//     void drawVec(sf::RenderWindow& window, Vector dot, Vector vec);
+    return true; 
+}
 
-// private:
-//     sf::RectangleShape canvas;
-//     sf::VertexArray y_axis;
-//     sf::VertexArray x_axis;
+void coordinate_system::draw_plot(sf::RenderWindow &window) {
+    sf::RectangleShape frame({float(width), float(height)});
+    frame.setPosition({frame_left.get_x(), frame_left.get_y()});
+    frame.setFillColor(sf::Color::White);
+    
+    window.draw(frame);
+    draw_axes(window);
+}
+       
+    
+void coordinate_system::link_child(coordinate_system *clone) {
+    children.push_back(clone);
+}
+                      
 
-//     float marks_eps;
-//     int marks_amount;
+   
+   
+void coordinate_system::draw_func(sf::RenderWindow& window, float (*func)(float), bool pass_action){
+    assert(func);
 
-//     void getAxes();
-//     void setMarks(sf::RenderWindow& window);
-//     bool isInside(sf::Vector2f dot);
+    if (pass_action) {
+        for (coordinate_system *cs : children) {
+            cs->draw_func(window, func, false);
+        }
+    }
+    
+    for (int x = 0; x < width; x++){
+        float geom_x = (frame_left.get_x() + x - axes_center.get_x()) / scale;
+        float geom_y = func(geom_x);
 
-//     void drawVecPrivate(sf::RenderWindow& window, Vector dot, Vector vec);
-// };
+        geom_vector2 geom_dot(geom_x, geom_y);
+
+        draw_dot(window, geom_dot);
+    }
+}
+
+geom_vector2 coordinate_system::convert_to_pixel_cord(geom_vector2 dot) {
+    dot = cord_mul(dot, geom_vector2(1, -1));
+    dot *= scale;
+    dot += axes_center;
+
+    return dot;
+}
+
+void coordinate_system::draw_dot(sf::RenderWindow &window, geom_vector2 dot, bool pass_action) {
+    sf::VertexArray dot_shape(sf::PrimitiveType::Points, 1);
+    dot_shape[0].color = sf::Color::Black;
+
+    if (pass_action) {
+        for (coordinate_system *cs : children) {
+            cs->draw_dot(window, dot, false);
+        }
+    }
+    
+    dot = convert_to_pixel_cord(dot);
+
+    if (!is_inside(dot)) return;
+
+    dot_shape[0].position = {dot.get_x(), dot.get_y()};
+    window.draw(dot_shape);
+}
+
+void coordinate_system::draw_line(
+    sf::RenderWindow &window, 
+    geom_vector2 line_start, 
+    geom_vector2 line_end,        
+    bool pass_action
+) { 
+
+    if (pass_action) {
+        for (coordinate_system *cs : children) {
+            cs->draw_line(window, line_start, line_end, false);
+        }
+    }
+
+    sf::VertexArray line_shape(sf::PrimitiveType::Lines, 2);
+    line_start = convert_to_pixel_cord(line_start);
+    line_end = convert_to_pixel_cord(line_end);
+
+    line_shape[0].position = {line_start.get_x(), line_start.get_y()};
+    line_shape[0].color = sf::Color::Black;
+
+    line_shape[1].position = {line_end.get_x(), line_end.get_y()};
+    line_shape[1].color = sf::Color::Black;
+
+    window.draw(line_shape);  
+}
 
 
-// coordinate_system::coordinate_system(sf::Vector2f size,
-//                                      sf::Vector2f position,
-//                                      sf::Vector2f center,
-//                                      float pixels_per_unit){
-//     this->size = size;
-//     this->position = position;
-//     this->center = center;
-//     this->pixels_per_unit = pixels_per_unit;
+void coordinate_system::draw_vector(
+    sf::RenderWindow &window, 
+    oriented_vector vector,     
+    bool pass_action
+) { 
+    sf::VertexArray dot_shape(sf::PrimitiveType::Points, 1);
+    dot_shape[0].color = sf::Color::Black;
 
-//     canvas = sf::RectangleShape(size);
+    if (pass_action) {
+        for (coordinate_system *cs : children) {
+            cs->draw_vector(window, vector, false);
+        }
+    }
+    
+    geom_vector2 vector_begin = vector.get_begin();
+    geom_vector2 vector_end = vector.get_end();
 
-//     canvas.setPosition(position);
-//     canvas.setFillColor(sf::Color::White);
+    draw_line(window, vector_begin, vector_end);
 
-//     getAxes();
+    
+    geom_vector2 cur_vec = vector_begin - vector_end;
 
-//     marks_eps = 10;
-//     marks_amount = int(size.x) / int(pixels_per_unit);
-// }
+    
+    geom_vector2 arrow_base = cur_vec * ARROW_BASE_SCALE;
+    geom_vector2 arrow_perp = (cur_vec * ARROW_PERP_SCALE).rotate90();
 
-// void coordinate_system::drawPlot(sf::RenderWindow& window){
-//     window.draw(canvas);
 
-//     window.draw(x_axis);
-//     window.draw(y_axis);
+    geom_vector2 arrow_left_part = arrow_base + arrow_perp;
+    geom_vector2 arrow_right_part = arrow_base + arrow_perp * (-1);
 
-//     setMarks(window);
-// }
-
-// void coordinate_system::getAxes(){
-//     y_axis = sf::VertexArray(sf::PrimitiveType::Lines, 2);
-//     x_axis = sf::VertexArray(sf::PrimitiveType::Lines, 2);
-
-//     sf::Vector2f plot_window_center = {position.x + size.x / 2, position.y + size.y / 2};
-
-//     y_axis[0].position = sf::Vector2f({plot_window_center.x - int(center.x * pixels_per_unit), position.y});
-//     y_axis[0].color = sf::Color::Black;
-//     y_axis[1].position = sf::Vector2f({plot_window_center.x - int(center.x * pixels_per_unit), position.y + size.y});
-//     y_axis[1].color = sf::Color::Black;
-
-//     x_axis[0].position = sf::Vector2f({position.x, plot_window_center.y + int(center.y * pixels_per_unit)});
-//     x_axis[0].color = sf::Color::Black;
-//     x_axis[1].position = sf::Vector2f({position.x + size.x, plot_window_center.y + int(center.y * pixels_per_unit)});
-//     x_axis[1].color = sf::Color::Black;
-// }
-
-// void coordinate_system::setMarks(sf::RenderWindow& window){
-//     sf::VertexArray mark(sf::PrimitiveType::Lines, 2);
-
-//     sf::Vector2f plot_window_center = {position.x + size.x / 2, position.y + size.y / 2};
-
-//     for (int i = 0; i <= marks_amount; i++){
-//         mark[0].position = sf::Vector2f({plot_window_center.x - marks_eps / 2 - int(center.x * pixels_per_unit), position.y + i * pixels_per_unit});
-//         mark[0].color = sf::Color::Black;
-
-//         mark[1].position = sf::Vector2f({plot_window_center.x + marks_eps / 2 - int(center.x * pixels_per_unit), position.y + i * pixels_per_unit});
-//         mark[1].color = sf::Color::Black;
-
-//         window.draw(mark);
-//     }
-
-//     for (int i = 0; i <= marks_amount; i++){
-//         mark[0].position = sf::Vector2f({position.x + i * pixels_per_unit, plot_window_center.y + marks_eps / 2 + int(center.y * pixels_per_unit)});
-//         mark[0].color = sf::Color::Black;
-
-//         mark[1].position = sf::Vector2f({position.x + i * pixels_per_unit, plot_window_center.y - marks_eps / 2 + int(center.y * pixels_per_unit)});
-//         mark[1].color = sf::Color::Black;
-
-//         window.draw(mark);
-//     }
-// }
-
-// bool coordinate_system::isInside(sf::Vector2f dot){
-//     if (dot.y > center.y + size.y / pixels_per_unit / 2 ||
-//         dot.y < center.y - size.y / pixels_per_unit / 2)
-//         return false;
-
-//     if (dot.x > center.x + size.x / pixels_per_unit / 2 ||
-//         dot.x < center.x - size.x / pixels_per_unit / 2)
-//         return false;
-
-//     return true;
-// }
-
-// void coordinate_system::drawFunc(sf::RenderWindow& window, float (*func)(float)){
-//     sf::VertexArray dot(sf::PrimitiveType::Points, 1);
-//     dot[0].color = sf::Color::Black;
-
-//     for (int x = 0; x < size.x; x++){
-//         float x_plot = (x - size.x / 2) / pixels_per_unit + center.x;
-//         float y_plot = func(x_plot);
-
-//         if (!isInside({x_plot, y_plot})) continue;
-
-//         float x_window = (x_plot - center.x) * pixels_per_unit + position.x + size.x / 2;
-//         float y_window = 2 * position.y + size.y - ((y_plot - center.y) * pixels_per_unit + position.y + size.y / 2);
-
-//         dot[0].position = {x_window, y_window};
-
-//         window.draw(dot);
-//     }
-// }
-
-// void coordinate_system::drawVecPrivate(sf::RenderWindow& window, Vector dot, Vector vec){
-//     sf::VertexArray vector(sf::PrimitiveType::Lines, 2);
-//     vector[0].color = sf::Color::Black;
-//     vector[1].color = sf::Color::Black;
-
-//     Vector begin_plot = {dot.x, dot.y};
-//     Vector end_plot = {dot.x + vec.x, dot.y + vec.y};
-
-//     Vector begin_window = {((begin_plot.x - center.x) * pixels_per_unit + position.x + size.x / 2),
-//                            2 * position.y + size.y - ((begin_plot.y - center.y) * pixels_per_unit + position.y + size.y / 2)};
-//     Vector end_window = {((end_plot.x - center.x) * pixels_per_unit + position.x + size.x / 2),
-//                            2 * position.y + size.y - ((end_plot.y - center.y) * pixels_per_unit + position.y + size.y / 2)};
-
-//     vector[0].position = {begin_window.x, begin_window.y};
-//     vector[1].position = {end_window.x, end_window.y};
-
-//     window.draw(vector);
-// }
-
-// void coordinate_system::drawVec(sf::RenderWindow& window, Vector dot, Vector vec){
-//     drawVecPrivate(window, dot, vec);
-//     drawVecPrivate(window, dot + vec, vec.normal().rotate(M_PI / 4) / 4);
-//     drawVecPrivate(window, dot + vec, vec.normal().rotate(M_PI / 4).reflect(vec) / 4);
-// }
+    draw_line(window, vector_end, vector_end + arrow_left_part);
+    draw_line(window, vector_end, vector_end + arrow_right_part);
+}
